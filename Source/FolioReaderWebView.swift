@@ -251,6 +251,7 @@ open class FolioReaderWebView: UIWebView {
         //FIX: https://github.com/FolioReader/FolioReaderKit/issues/316
         setMenuVisible(false)
     }
+    
 
     // MARK: - Create and show menu
     
@@ -271,21 +272,8 @@ open class FolioReaderWebView: UIWebView {
         let underline = UIImage(readerImageNamed: "underline-marker")
 
         let menuController = UIMenuController.shared
-        
+                                        
         let highlightItem = UIMenuItem(title: self.readerConfig.localizedHighlightMenu, action: #selector(highlight(_:)))
-        let rememberItem = UIMenuItem(title: self.readerConfig.localizedRememberMenu) { [weak self] (_) in
-            guard let self = self else { return }
-            
-            guard let selectedText = self.js("getSelectedText()") else {
-                return
-            }
-
-            self.setMenuVisible(false)
-            self.clearTextSelection()
-            print("Yo mama")
-            NotificationCenter.default.post(name: .UserPressedRemember, object: nil, userInfo: [FolioReaderWebView.kSelectedText: selectedText] )
-        }
-        
         let highlightNoteItem = UIMenuItem(title: self.readerConfig.localizedHighlightNote, action: #selector(highlightWithNote(_:)))
         let editNoteItem = UIMenuItem(title: self.readerConfig.localizedHighlightNote, action: #selector(updateHighlightNote(_:)))
         let playAudioItem = UIMenuItem(title: self.readerConfig.localizedPlayMenu, action: #selector(play(_:)))
@@ -331,7 +319,7 @@ open class FolioReaderWebView: UIWebView {
             menuItems = [yellowItem, greenItem, blueItem, pinkItem, underlineItem]
         } else {
             // default menu
-            menuItems = [highlightItem, defineItem, highlightNoteItem, rememberItem]
+            menuItems = [highlightItem, defineItem, highlightNoteItem]
 
             if self.book.hasAudio || self.readerConfig.enableTTS {
                 menuItems.insert(playAudioItem, at: 0)
@@ -343,6 +331,10 @@ open class FolioReaderWebView: UIWebView {
         }
         
         menuController.menuItems = menuItems
+        
+        if let selectedText = self.js("getSelectedText()") {
+            NotificationCenter.default.post(name: .CreateMenuCalled, object: nil, userInfo: [FolioReaderWebView.kSelectedText: selectedText] )
+        }
     }
     
     open func setMenuVisible(_ menuVisible: Bool, animated: Bool = true, andRect rect: CGRect = CGRect.zero) {

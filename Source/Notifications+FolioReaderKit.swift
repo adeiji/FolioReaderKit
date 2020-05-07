@@ -10,6 +10,6 @@ import Foundation
 
 public extension Notification.Name {
     
-    static let UserPressedRemember = NSNotification.Name("UserPressedRemember")
+    static let CreateMenuCalled = NSNotification.Name("CreateMenuCalled")
     
 }
