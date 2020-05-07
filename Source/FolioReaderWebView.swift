@@ -7,12 +7,15 @@
 //
 
 import UIKit
+import MenuItemKit
 
 /// The custom WebView used in each page
 open class FolioReaderWebView: UIWebView {
     var isColors = false
     var isShare = false
     var isOneWord = false
+    
+    static let kSelectedText = "SelectedText"
 
     fileprivate weak var readerContainer: FolioReaderContainer?
 
@@ -128,6 +131,17 @@ open class FolioReaderWebView: UIWebView {
             Highlight.removeById(withConfiguration: self.readerConfig, highlightId: removedId)
         }
         setMenuVisible(false)
+    }
+    
+    @objc func remember(_ sender: UIMenuController?) {
+        guard let selectedText = js("getSelectedText()") else {
+            return
+        }
+
+        self.setMenuVisible(false)
+        self.clearTextSelection()
+        
+        NotificationCenter.default.post(name: .UserPressedRemember, object: nil, userInfo: [FolioReaderWebView.kSelectedText: selectedText] )
     }
 
     @objc func highlight(_ sender: UIMenuController?) {
@@ -250,7 +264,7 @@ open class FolioReaderWebView: UIWebView {
     }
 
     // MARK: - Create and show menu
-
+    
     func createMenu(options: Bool) {
         guard (self.readerConfig.useReaderMenuController == true) else {
             return
@@ -269,6 +283,7 @@ open class FolioReaderWebView: UIWebView {
 
         let menuController = UIMenuController.shared
 
+        let rememberItem = UIMenuItem(title: "Remember", action: #selector(remember(_:)))
         let highlightItem = UIMenuItem(title: self.readerConfig.localizedHighlightMenu, action: #selector(highlight(_:)))
         let highlightNoteItem = UIMenuItem(title: self.readerConfig.localizedHighlightNote, action: #selector(highlightWithNote(_:)))
         let editNoteItem = UIMenuItem(title: self.readerConfig.localizedHighlightNote, action: #selector(updateHighlightNote(_:)))
@@ -315,7 +330,7 @@ open class FolioReaderWebView: UIWebView {
             menuItems = [yellowItem, greenItem, blueItem, pinkItem, underlineItem]
         } else {
             // default menu
-            menuItems = [highlightItem, defineItem, highlightNoteItem]
+            menuItems = [rememberItem, highlightItem, defineItem, highlightNoteItem]
 
             if self.book.hasAudio || self.readerConfig.enableTTS {
                 menuItems.insert(playAudioItem, at: 0)

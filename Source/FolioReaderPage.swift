@@ -8,7 +8,6 @@
 
 import UIKit
 import SafariServices
-import MenuItemKit
 
 /// Protocol which is used from `FolioReaderPage`s.
 @objc public protocol FolioReaderPageDelegate: class {

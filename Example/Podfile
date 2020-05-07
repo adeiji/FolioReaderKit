@@ -5,6 +5,7 @@ inhibit_all_warnings!
 
 def shared_pods
   pod 'FolioReaderKit', path: '../'
+  pod 'RealmSwift'
 end
 
 def testing_pods
