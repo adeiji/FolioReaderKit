@@ -132,17 +132,6 @@ open class FolioReaderWebView: UIWebView {
         }
         setMenuVisible(false)
     }
-    
-    @objc func remember(_ sender: UIMenuController?) {
-        guard let selectedText = js("getSelectedText()") else {
-            return
-        }
-
-        self.setMenuVisible(false)
-        self.clearTextSelection()
-        
-        NotificationCenter.default.post(name: .UserPressedRemember, object: nil, userInfo: [FolioReaderWebView.kSelectedText: selectedText] )
-    }
 
     @objc func highlight(_ sender: UIMenuController?) {
         let highlightAndReturn = js("highlightString('\(HighlightStyle.classForStyle(self.folioReader.currentHighlightStyle))')")
@@ -282,9 +271,21 @@ open class FolioReaderWebView: UIWebView {
         let underline = UIImage(readerImageNamed: "underline-marker")
 
         let menuController = UIMenuController.shared
-
-        let rememberItem = UIMenuItem(title: "Remember", action: #selector(remember(_:)))
+        
         let highlightItem = UIMenuItem(title: self.readerConfig.localizedHighlightMenu, action: #selector(highlight(_:)))
+        let rememberItem = UIMenuItem(title: self.readerConfig.localizedRememberMenu) { [weak self] (_) in
+            guard let self = self else { return }
+            
+            guard let selectedText = self.js("getSelectedText()") else {
+                return
+            }
+
+            self.setMenuVisible(false)
+            self.clearTextSelection()
+            print("Yo mama")
+            NotificationCenter.default.post(name: .UserPressedRemember, object: nil, userInfo: [FolioReaderWebView.kSelectedText: selectedText] )
+        }
+        
         let highlightNoteItem = UIMenuItem(title: self.readerConfig.localizedHighlightNote, action: #selector(highlightWithNote(_:)))
         let editNoteItem = UIMenuItem(title: self.readerConfig.localizedHighlightNote, action: #selector(updateHighlightNote(_:)))
         let playAudioItem = UIMenuItem(title: self.readerConfig.localizedPlayMenu, action: #selector(play(_:)))
@@ -330,7 +331,7 @@ open class FolioReaderWebView: UIWebView {
             menuItems = [yellowItem, greenItem, blueItem, pinkItem, underlineItem]
         } else {
             // default menu
-            menuItems = [rememberItem, highlightItem, defineItem, highlightNoteItem]
+            menuItems = [highlightItem, defineItem, highlightNoteItem, rememberItem]
 
             if self.book.hasAudio || self.readerConfig.enableTTS {
                 menuItems.insert(playAudioItem, at: 0)
