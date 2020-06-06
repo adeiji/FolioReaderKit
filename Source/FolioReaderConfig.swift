@@ -119,7 +119,7 @@ open class FolioReaderConfig: NSObject {
     open var nightModeNavBackground = UIColor(rgba: "#131313")
     
     /// Night mode background color
-    open var nightModeBackground = UIColor(rgba: "#131313")
+    open var nightModeBackground = UIColor(rgba: "#131414")
 
     /// Night mode menu background color
     open var nightModeMenuBackground = UIColor(rgba: "#1E1E1E")

@@ -14,7 +14,7 @@ import SSZipArchive
 import ZipArchive
 #endif
 
-class FREpubParser: NSObject, SSZipArchiveDelegate {
+open class FREpubParser: NSObject, SSZipArchiveDelegate {
 
     let book = FRBook()
     private var resourcesBasePath = ""
@@ -78,7 +78,7 @@ class FREpubParser: NSObject, SSZipArchiveDelegate {
     ///   - unzipPath: Path to unzip the compressed epub.
     /// - Returns: `FRBook` Object
     /// - Throws: `FolioReaderError`
-    func readEpub(epubPath withEpubPath: String, removeEpub: Bool = true, unzipPath: String? = nil) throws -> FRBook {
+    open func readEpub(epubPath withEpubPath: String, removeEpub: Bool = true, unzipPath: String? = nil) throws -> FRBook {
         epubPathToRemove = withEpubPath
         shouldRemoveEpub = removeEpub
 
@@ -104,11 +104,11 @@ class FREpubParser: NSObject, SSZipArchiveDelegate {
 
         if needsUnzip {
             SSZipArchive.unzipFile(atPath: withEpubPath, toDestination: bookBasePath, delegate: self)
+            
+            // Skip from backup this folder
+            try addSkipBackupAttributeToItemAtURL(URL(fileURLWithPath: bookBasePath, isDirectory: true))
         }
-
-        // Skip from backup this folder
-        try addSkipBackupAttributeToItemAtURL(URL(fileURLWithPath: bookBasePath, isDirectory: true))
-
+        
         book.name = bookName
         try readContainer(with: bookBasePath)
         try readOpf(with: bookBasePath)
@@ -474,7 +474,7 @@ class FREpubParser: NSObject, SSZipArchiveDelegate {
     /// - Parameter url: File URL
     /// - Throws: Error if not possible
     fileprivate func addSkipBackupAttributeToItemAtURL(_ url: URL) throws {
-        assert(FileManager.default.fileExists(atPath: url.path))
+//        assert(FileManager.default.fileExists(atPath: url.path))
 
         var urlToExclude = url
         var resourceValues = URLResourceValues()

@@ -40,8 +40,8 @@ open class FolioReaderWebView: UIWebView {
 
     init(frame: CGRect, readerContainer: FolioReaderContainer) {
         self.readerContainer = readerContainer
-
         super.init(frame: frame)
+        self.createMenu(options: true)
     }
 
     required public init?(coder aDecoder: NSCoder) {
@@ -66,7 +66,10 @@ open class FolioReaderWebView: UIWebView {
                 || (action == #selector(define(_:)) && isOneWord)
                 || (action == #selector(play(_:)) && (book.hasAudio || readerConfig.enableTTS))
                 || (action == #selector(share(_:)) && readerConfig.allowSharing)
-                || (action == #selector(copy(_:)) && readerConfig.allowSharing) {
+                || (action == #selector(copy(_:)) && readerConfig.allowSharing)
+                || (action == #selector(postTranslateButtonPressed(_:)))
+                || (action == #selector(postCreateCardButtonPressed(_:)))
+                || (action == #selector(share(_:))) {
                 return true
             }
             return false
@@ -212,7 +215,8 @@ open class FolioReaderWebView: UIWebView {
         let vc = UIReferenceLibraryViewController(term: selectedText)
         vc.view.tintColor = self.readerConfig.tintColor
         guard let readerContainer = readerContainer else { return }
-        readerContainer.show(vc, sender: nil)
+        readerContainer.present(vc, animated: true, completion: nil)
+//        readerContainer.show(vc, sender: nil)
     }
 
     @objc func play(_ sender: UIMenuController?) {
@@ -259,82 +263,54 @@ open class FolioReaderWebView: UIWebView {
         guard (self.readerConfig.useReaderMenuController == true) else {
             return
         }
-
+        
+        let menuController = UIMenuController.shared
+        
         isShare = options
 
-        let colors = UIImage(readerImageNamed: "colors-marker")
         let share = UIImage(readerImageNamed: "share-marker")
-        let remove = UIImage(readerImageNamed: "no-marker")
-        let yellow = UIImage(readerImageNamed: "yellow-marker")
-        let green = UIImage(readerImageNamed: "green-marker")
-        let blue = UIImage(readerImageNamed: "blue-marker")
-        let pink = UIImage(readerImageNamed: "pink-marker")
-        let underline = UIImage(readerImageNamed: "underline-marker")
-
-        let menuController = UIMenuController.shared
-                                        
-        let highlightItem = UIMenuItem(title: self.readerConfig.localizedHighlightMenu, action: #selector(highlight(_:)))
-        let highlightNoteItem = UIMenuItem(title: self.readerConfig.localizedHighlightNote, action: #selector(highlightWithNote(_:)))
-        let editNoteItem = UIMenuItem(title: self.readerConfig.localizedHighlightNote, action: #selector(updateHighlightNote(_:)))
-        let playAudioItem = UIMenuItem(title: self.readerConfig.localizedPlayMenu, action: #selector(play(_:)))
+                                                
         let defineItem = UIMenuItem(title: self.readerConfig.localizedDefineMenu, action: #selector(define(_:)))
-        let colorsItem = UIMenuItem(title: "C", image: colors) { [weak self] _ in
-            self?.colors(menuController)
-        }
-        let shareItem = UIMenuItem(title: "S", image: share) { [weak self] _ in
-            self?.share(menuController)
-        }
-        let removeItem = UIMenuItem(title: "R", image: remove) { [weak self] _ in
-            self?.remove(menuController)
-        }
-        let yellowItem = UIMenuItem(title: "Y", image: yellow) { [weak self] _ in
-            self?.setYellow(menuController)
-        }
-        let greenItem = UIMenuItem(title: "G", image: green) { [weak self] _ in
-            self?.setGreen(menuController)
-        }
-        let blueItem = UIMenuItem(title: "B", image: blue) { [weak self] _ in
-            self?.setBlue(menuController)
-        }
-        let pinkItem = UIMenuItem(title: "P", image: pink) { [weak self] _ in
-            self?.setPink(menuController)
-        }
-        let underlineItem = UIMenuItem(title: "U", image: underline) { [weak self] _ in
-            self?.setUnderline(menuController)
-        }
 
+        let shareItem = UIMenuItem(title: "S", image: share) { [weak self] _ in
+            guard let self = self else { return }
+            self.share(menuController)
+        }
+        
         var menuItems: [UIMenuItem] = []
 
         // menu on existing highlight
         if isShare {
-            menuItems = [colorsItem, editNoteItem, removeItem]
-            
             if (self.readerConfig.allowSharing == true) {
                 menuItems.append(shareItem)
             }
             
             isShare = false
-        } else if isColors {
-            // menu for selecting highlight color
-            menuItems = [yellowItem, greenItem, blueItem, pinkItem, underlineItem]
         } else {
-            // default menu
-            menuItems = [highlightItem, defineItem, highlightNoteItem]
-
-            if self.book.hasAudio || self.readerConfig.enableTTS {
-                menuItems.insert(playAudioItem, at: 0)
-            }
+            menuItems = [defineItem]
 
             if (self.readerConfig.allowSharing == true) {
                 menuItems.append(shareItem)
             }
         }
+                
+        let translateItem = UIMenuItem(title: "Translate", action: #selector(postTranslateButtonPressed(_:)))
+        menuItems.append(translateItem)
         
+        let createCardItem = UIMenuItem(title: "Create Card", action: #selector(postCreateCardButtonPressed(_:)))
+        
+        menuItems.append(createCardItem)
+                
         menuController.menuItems = menuItems
-        
-        if let selectedText = self.js("getSelectedText()") {
-            NotificationCenter.default.post(name: .CreateMenuCalled, object: nil, userInfo: [FolioReaderWebView.kSelectedText: selectedText] )
-        }
+                
+    }
+    
+    @objc func postCreateCardButtonPressed (_ sender: UIMenuController?) {
+        NotificationCenter.default.post(name: .CreateCardButtonPressed, object: nil, userInfo: nil)
+    }
+    
+    @objc func postTranslateButtonPressed (_ sender: UIMenuController?) {
+        NotificationCenter.default.post(name: .TranslateButtonPressed, object: nil, userInfo: nil)
     }
     
     open func setMenuVisible(_ menuVisible: Bool, animated: Bool = true, andRect rect: CGRect = CGRect.zero) {

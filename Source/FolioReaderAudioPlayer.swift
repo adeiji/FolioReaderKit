@@ -156,6 +156,7 @@ open class FolioReaderAudioPlayer: NSObject {
     }
 
     @objc func pause() {
+        print("pause called on observer")
         playing = false
 
         if !isTextToSpeech {

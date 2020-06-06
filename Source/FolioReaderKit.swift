@@ -191,7 +191,9 @@ extension FolioReader {
                     readerCenter.scrollScrubber?.reloadColors()
                     readerCenter.collectionView.backgroundColor = (self.nightMode == true ? self.readerContainer?.readerConfig.nightModeBackground : UIColor.white)
                 }, completion: { (finished: Bool) in
-                    NotificationCenter.default.post(name: Notification.Name(rawValue: "needRefreshPageMode"), object: nil)
+                    DispatchQueue.main.async {
+                        NotificationCenter.default.post(name: Notification.Name(rawValue: "needRefreshPageMode"), object: nil)
+                    }                    
                 })
             }
         }
@@ -308,7 +310,7 @@ extension FolioReader {
 
 // MARK: - Metadata
 
-extension FolioReader {
+public extension FolioReader {
 
     // TODO QUESTION: The static `getCoverImage` function used the shared instance before and ignored the `unzipPath` parameter.
     // Should we properly implement the parameter (what has been done now) or should change the API to only use the current FolioReader instance?
@@ -335,6 +337,9 @@ extension FolioReader {
 
     /// Save Reader state, book, page and scroll offset.
     @objc open func saveReaderState() {
+        
+        print("Notification called saveReaderState()")
+        
         guard isReaderOpen else {
             return
         }

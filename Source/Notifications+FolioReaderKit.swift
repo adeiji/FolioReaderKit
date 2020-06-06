@@ -11,5 +11,7 @@ import Foundation
 public extension Notification.Name {
     
     static let CreateMenuCalled = NSNotification.Name("CreateMenuCalled")
+    static let TranslateButtonPressed = NSNotification.Name("TranslateButtonPressed")
+    static let CreateCardButtonPressed = NSNotification.Name("CreateCardButtonPressed")
     
 }
