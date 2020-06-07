@@ -15,7 +15,7 @@ import ZFDragableModalTransition
     /// Notifies that a page appeared. This is triggered when a page is chosen and displayed.
     ///
     /// - Parameter page: The appeared page
-    @objc optional func pageDidAppear(_ page: FolioReaderPage)
+    @objc optional func pageDidAppear(_ page: FolioReaderPageCollectionViewCell)
 
     /// Passes and returns the HTML content as `String`. Implement this method if you want to modify the HTML content of a `FolioReaderPage`.
     ///
@@ -23,7 +23,7 @@ import ZFDragableModalTransition
     ///   - page: The `FolioReaderPage`.
     ///   - htmlContent: The current HTML content as `String`.
     /// - Returns: The adjusted HTML content as `String`. This is the content which will be loaded into the given `FolioReaderPage`.
-    @objc optional func htmlContentForPage(_ page: FolioReaderPage, htmlContent: String) -> String
+    @objc optional func htmlContentForPage(_ page: FolioReaderPageCollectionViewCell, htmlContent: String) -> String
     
     /// Notifies that a page changed. This is triggered when collection view cell is changed.
     ///
@@ -45,7 +45,7 @@ open class FolioReaderCenter: UIViewController, UICollectionViewDelegate, UIColl
     open weak var readerContainer: FolioReaderContainer?
 
     /// The current visible page on reader
-    open fileprivate(set) var currentPage: FolioReaderPage?
+    open fileprivate(set) var currentPage: FolioReaderPageCollectionViewCell?
 
     /// The collection view with pages
     open var collectionView: UICollectionView!
@@ -174,7 +174,7 @@ open class FolioReaderCenter: UIViewController, UICollectionViewDelegate, UIColl
         }
 
         // Register cell classes
-        collectionView?.register(FolioReaderPage.self, forCellWithReuseIdentifier: kReuseCellIdentifier)
+        collectionView?.register(FolioReaderPageCollectionViewCell.self, forCellWithReuseIdentifier: kReuseCellIdentifier)
 
         // Configure navigation bar and layout
         automaticallyAdjustsScrollViewInsets = false
@@ -326,7 +326,7 @@ open class FolioReaderCenter: UIViewController, UICollectionViewDelegate, UIColl
         self.transformViewForRTL(self.collectionView)
     }
 
-    func setPageProgressiveDirection(_ page: FolioReaderPage) {
+    func setPageProgressiveDirection(_ page: FolioReaderPageCollectionViewCell) {
         self.transformViewForRTL(page)
     }
 
@@ -437,11 +437,11 @@ open class FolioReaderCenter: UIViewController, UICollectionViewDelegate, UIColl
     }
 
     open func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        let reuseableCell = collectionView.dequeueReusableCell(withReuseIdentifier: kReuseCellIdentifier, for: indexPath) as? FolioReaderPage
+        let reuseableCell = collectionView.dequeueReusableCell(withReuseIdentifier: kReuseCellIdentifier, for: indexPath) as? FolioReaderPageCollectionViewCell
         return self.configure(readerPageCell: reuseableCell, atIndexPath: indexPath)
     }
 
-    private func configure(readerPageCell cell: FolioReaderPage?, atIndexPath indexPath: IndexPath) -> UICollectionViewCell {
+    private func configure(readerPageCell cell: FolioReaderPageCollectionViewCell?, atIndexPath indexPath: IndexPath) -> UICollectionViewCell {
         guard let cell = cell, let readerContainer = readerContainer else {
             return UICollectionViewCell()
         }
@@ -498,6 +498,7 @@ open class FolioReaderCenter: UIViewController, UICollectionViewDelegate, UIColl
         }
         
         cell.loadHTMLString(html, baseURL: URL(fileURLWithPath: resource.fullHref.deletingLastPathComponent))
+        
         return cell
     }
 
@@ -627,14 +628,14 @@ open class FolioReaderCenter: UIViewController, UICollectionViewDelegate, UIColl
         }
     }
 
-    func updateCurrentPage(_ page: FolioReaderPage? = nil, completion: (() -> Void)? = nil) {
+    func updateCurrentPage(_ page: FolioReaderPageCollectionViewCell? = nil, completion: (() -> Void)? = nil) {
         if let page = page {
             currentPage = page
             self.previousPageNumber = page.pageNumber-1
             self.currentPageNumber = page.pageNumber
         } else {
             let currentIndexPath = getCurrentIndexPath()
-            currentPage = collectionView.cellForItem(at: currentIndexPath) as? FolioReaderPage
+            currentPage = collectionView.cellForItem(at: currentIndexPath) as? FolioReaderPageCollectionViewCell
 
             self.previousPageNumber = currentIndexPath.row
             self.currentPageNumber = currentIndexPath.row+1
@@ -660,19 +661,17 @@ open class FolioReaderCenter: UIViewController, UICollectionViewDelegate, UIColl
             }
             
             self.pageIndicatorView?.totalMinutes = Int(readingTime)!
-            
         }
 
-
-        pagesForCurrentPage(currentPage)
-
+        self.pageIndicatorView?.totalMinutes = 0
+        self.pagesForCurrentPage(currentPage)
         delegate?.pageDidAppear?(currentPage)
         delegate?.pageItemChanged?(self.getCurrentPageItemNumber())
         
         completion?()
     }
 
-    func pagesForCurrentPage(_ page: FolioReaderPage?) {
+    func pagesForCurrentPage(_ page: FolioReaderPageCollectionViewCell?) {
         guard let page = page, let webView = page.webView else { return }
 
         let pageSize = self.readerConfig.isDirection(pageHeight, self.pageWidth, pageHeight)
@@ -829,7 +828,7 @@ open class FolioReaderCenter: UIViewController, UICollectionViewDelegate, UIColl
         // TODO: It was implemented for horizontal orientation.
         // Need check page orientation (v/h) and make correct calc for vertical
         guard
-            let cell = collectionView.cellForItem(at: getCurrentIndexPath()) as? FolioReaderPage,
+            let cell = collectionView.cellForItem(at: getCurrentIndexPath()) as? FolioReaderPageCollectionViewCell,
             let contentOffset = cell.webView?.scrollView.contentOffset,
             let contentOffsetXLimit = cell.webView?.scrollView.contentSize.width else {
                 completion?()
@@ -882,7 +881,7 @@ open class FolioReaderCenter: UIViewController, UICollectionViewDelegate, UIColl
         // TODO: It was implemented for horizontal orientation.
         // Need check page orientation (v/h) and make correct calc for vertical
         guard
-            let cell = collectionView.cellForItem(at: getCurrentIndexPath()) as? FolioReaderPage,
+            let cell = collectionView.cellForItem(at: getCurrentIndexPath()) as? FolioReaderPageCollectionViewCell,
             let contentOffset = cell.webView?.scrollView.contentOffset else {
                 completion?()
                 return
@@ -904,7 +903,7 @@ open class FolioReaderCenter: UIViewController, UICollectionViewDelegate, UIColl
         // TODO: It was implemented for horizontal orientation.
         // Need check page orientation (v/h) and make correct calc for vertical
         guard
-            let cell = collectionView.cellForItem(at: getCurrentIndexPath()) as? FolioReaderPage,
+            let cell = collectionView.cellForItem(at: getCurrentIndexPath()) as? FolioReaderPageCollectionViewCell,
             let contentSize = cell.webView?.scrollView.contentSize else {
                 completion?()
                 return
@@ -930,7 +929,7 @@ open class FolioReaderCenter: UIViewController, UICollectionViewDelegate, UIColl
         // TODO: It was implemented for horizontal orientation.
         // Need check page orientation (v/h) and make correct calc for vertical
         guard
-            let cell = collectionView.cellForItem(at: getCurrentIndexPath()) as? FolioReaderPage,
+            let cell = collectionView.cellForItem(at: getCurrentIndexPath()) as? FolioReaderPageCollectionViewCell,
             let contentSize = cell.webView?.scrollView.contentSize else {
                 delegate?.pageItemChanged?(getCurrentPageItemNumber())
                 completion?()
@@ -1296,12 +1295,7 @@ open class FolioReaderCenter: UIViewController, UICollectionViewDelegate, UIColl
 
         // Perform the page after a short delay as the collection view hasn't completed it's transition if this method is called (the index paths aren't right during fast scrolls).
         delay(0.2, closure: { [weak self] in
-            if (self?.readerConfig.scrollDirection == .horizontalWithVerticalContent),
-                let cell = ((scrollView.superview as? UIWebView)?.delegate as? FolioReaderPage) {
-                let currentIndexPathRow = cell.pageNumber - 1
-                self?.currentWebViewScrollPositions[currentIndexPathRow] = scrollView.contentOffset
-            }
-
+            
             if (scrollView is UICollectionView) {
                 guard let instance = self else {
                     return
@@ -1433,7 +1427,7 @@ open class FolioReaderCenter: UIViewController, UICollectionViewDelegate, UIColl
 
 extension FolioReaderCenter: FolioReaderPageDelegate {
 
-    public func pageDidLoad(_ page: FolioReaderPage) {
+    public func pageDidLoad(_ page: FolioReaderPageCollectionViewCell) {
         if self.readerConfig.loadSavedPositionForCurrentBook, let position = folioReader.savedPositionForCurrentBook {
             let pageNumber = position["pageNumber"] as? Int
             let offset = self.readerConfig.isDirection(position["pageOffsetY"], position["pageOffsetX"], position["pageOffsetY"]) as? CGFloat
@@ -1469,7 +1463,7 @@ extension FolioReaderCenter: FolioReaderPageDelegate {
         pageDelegate?.pageDidLoad?(page)
     }
     
-    public func pageWillLoad(_ page: FolioReaderPage) {
+    public func pageWillLoad(_ page: FolioReaderPageCollectionViewCell) {
         // Pass the event to the centers `pageDelegate`
         pageDelegate?.pageWillLoad?(page)
     }

@@ -19,14 +19,14 @@ import WebKit
 
      - parameter page: The loaded page
      */
-    @objc optional func pageWillLoad(_ page: FolioReaderPage)
+    @objc optional func pageWillLoad(_ page: FolioReaderPageCollectionViewCell)
 
     /**
      Notifies that page did load. A page load doesn't mean that this page is displayed right away, use `pageDidAppear` to get informed about the appearance of a page.
 
      - parameter page: The loaded page
      */
-    @objc optional func pageDidLoad(_ page: FolioReaderPage)
+    @objc optional func pageDidLoad(_ page: FolioReaderPageCollectionViewCell)
     
     /**
      Notifies that page receive tap gesture.
@@ -36,7 +36,15 @@ import WebKit
     @objc optional func pageTap(_ recognizer: UITapGestureRecognizer)
 }
 
-open class FolioReaderPage: UICollectionViewCell, WKNavigationDelegate, UIGestureRecognizerDelegate {
+/**
+ The way that this works is as the following:
+ 
+ Each FolioReaderPage is a collection view cell with a webView inside of it
+ The user is able to scroll within the webView, and once they reach the end, they are then
+ taken to the next page, because they've reached the bottom of the webView scrollView
+ 
+ */
+open class FolioReaderPageCollectionViewCell: UICollectionViewCell, WKNavigationDelegate, UIGestureRecognizerDelegate {
     weak var delegate: FolioReaderPageDelegate?
     var readerContainer: FolioReaderContainer?
 
@@ -44,6 +52,7 @@ open class FolioReaderPage: UICollectionViewCell, WKNavigationDelegate, UIGestur
     open var pageNumber: Int!
     open var webView: FolioReaderWebView?
 
+    /// What is the colorView?  What is it's purpose?
     fileprivate var colorView: UIView!
     fileprivate var shouldShowBar = true
     fileprivate var menuIsVisible = false
@@ -70,7 +79,7 @@ open class FolioReaderPage: UICollectionViewCell, WKNavigationDelegate, UIGestur
         self.readerContainer = FolioReaderContainer(withConfig: FolioReaderConfig(), folioReader: FolioReader(), epubPath: "")
         super.init(frame: frame)
         self.backgroundColor = UIColor.clear
-
+        
         NotificationCenter.default.addObserver(self, selector: #selector(refreshPageMode), name: NSNotification.Name(rawValue: "needRefreshPageMode"), object: nil)
     }
 
@@ -84,6 +93,7 @@ open class FolioReaderPage: UICollectionViewCell, WKNavigationDelegate, UIGestur
             webView?.scrollView.showsVerticalScrollIndicator = false
             webView?.scrollView.showsHorizontalScrollIndicator = false
             webView?.backgroundColor = .clear
+            webView?.scrollView.isScrollEnabled = true
             self.contentView.addSubview(webView!)
         }
         webView?.navigationDelegate = self
@@ -139,13 +149,18 @@ open class FolioReaderPage: UICollectionViewCell, WKNavigationDelegate, UIGestur
             height: self.readerConfig.isDirection(bounds.height - navTotal, bounds.height - navTotal - paddingTop - paddingBottom, bounds.height - navTotal)
         )
     }
+    
+    func getDocumentsDirectory() -> URL {
+        let paths = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
+        return paths[0]
+    }
 
     func loadHTMLString(_ htmlContent: String!, baseURL: URL!) {
+        webView?.alpha = 0
+        let headerString = "<meta name=\"viewport\" content=\"initial-scale=1.0\" />"
         // Insert the stored highlights to the HTML
         let tempHtmlContent = htmlContentWithInsertHighlights(htmlContent)
-        // Load the html into the webview
-        webView?.alpha = 0
-        webView?.loadHTMLString(tempHtmlContent, baseURL: baseURL)
+        webView?.loadHTMLString(headerString + tempHtmlContent, baseURL: baseURL)
     }
 
     // MARK: - Highlights
@@ -497,11 +512,11 @@ open class FolioReaderPage: UICollectionViewCell, WKNavigationDelegate, UIGestur
     func getAnchorOffset(_ anchor: String, completion: @escaping ((CGFloat) -> ())) {
         let horizontal = self.readerConfig.scrollDirection == .horizontal
         
-        webView?.js("getAnchorOffset('\(anchor)', \(horizontal.description))") { strOffset in
-            guard let strOffset = strOffset else {
+        webView?.evaluateJavaScript("getAnchorOffset('\(anchor)', \(horizontal.description))") { (offset, error) in
+            guard let offset = offset as? CGFloat else {
                 completion(CGFloat(0))
                 return }
-            completion(CGFloat((strOffset as NSString).floatValue))
+            completion(offset)
         }
         
     }

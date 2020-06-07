@@ -378,7 +378,9 @@ extension FolioReaderQuoteShare: UICollectionViewDelegate {
 
         guard (indexPath as NSIndexPath).row > 0 else {
             let alertController = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
-
+            let popOverController = alertController.popoverPresentationController
+            popOverController?.sourceView = collectionView.cellForItem(at: indexPath)
+            
             let takePhoto = UIAlertAction(title: self.readerConfig.localizedTakePhoto, style: .default, handler: { (action) -> Void in
                 self.imagePicker.sourceType = .camera
                 self.imagePicker.allowsEditing = true

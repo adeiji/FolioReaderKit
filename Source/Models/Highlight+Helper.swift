@@ -289,7 +289,7 @@ extension Highlight {
     ///   - page: The page containing the HTML.
     ///   - highlightId: The ID to be removed
     /// - Returns: The removed id
-    public static func removeFromHTMLById(withinPage page: FolioReaderPage?, highlightId: String, completion: @escaping JSCallback) {
+    public static func removeFromHTMLById(withinPage page: FolioReaderPageCollectionViewCell?, highlightId: String, completion: @escaping JSCallback) {
         guard let currentPage = page else { return }
         
         currentPage.webView?.js("removeHighlightById('\(highlightId)')", completion: completion)
