@@ -497,6 +497,12 @@ open class FolioReaderCenter: UIViewController, UICollectionViewDelegate, UIColl
             html = modifiedHtmlContent
         }
         
+        var baseURL = resource.fullHref.deletingLastPathComponent
+        
+        while (baseURL.pathExtension != "epub") {
+            baseURL = baseURL.deletingLastPathComponent
+        }
+        
         cell.loadHTMLString(html, baseURL: URL(fileURLWithPath: resource.fullHref.deletingLastPathComponent))
         
         return cell

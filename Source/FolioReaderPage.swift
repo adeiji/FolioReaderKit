@@ -158,9 +158,28 @@ open class FolioReaderPageCollectionViewCell: UICollectionViewCell, WKNavigation
     func loadHTMLString(_ htmlContent: String!, baseURL: URL!) {
         webView?.alpha = 0
         let headerString = "<meta name=\"viewport\" content=\"initial-scale=1.0\" />"
-        // Insert the stored highlights to the HTML
-        let tempHtmlContent = htmlContentWithInsertHighlights(htmlContent)
-        webView?.loadHTMLString(headerString + tempHtmlContent, baseURL: baseURL)
+        
+        let filename = getDocumentsDirectory().appendingPathComponent("temp/test.html")
+        
+        do {
+            // Insert the stored highlights to the HTML
+            let tempHtmlContent = htmlContentWithInsertHighlights(htmlContent)
+            
+            if FileManager.default.fileExists(atPath: filename.deletingLastPathComponent().path) {
+                try FileManager.default.removeItem(at: filename.deletingLastPathComponent())
+            }
+                        
+            try FileManager.default.copyItem(at: baseURL, to: filename.deletingLastPathComponent())
+            try tempHtmlContent.write(to: filename, atomically: true, encoding: String.Encoding.utf8)
+            webView?.loadFileURL(filename, allowingReadAccessTo: filename.deletingLastPathComponent())
+        } catch {
+            print("Error while loading HTML String: \(error.localizedDescription)")
+            // failed to write file – bad permissions, bad filename, missing permissions, or more likely it can't be converted to the encoding
+        }
+        
+        
+        
+        
     }
 
     // MARK: - Highlights
