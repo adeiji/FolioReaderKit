@@ -350,10 +350,10 @@ open class FolioReaderAudioPlayer: NSObject {
         return self.nextAudioFragment()
     }
 
-    func playText(_ href: String, text: String) {
+    func playText(_ href: String?, text: String) {
         isTextToSpeech = true
         playing = true
-        currentHref = href
+//        currentHref = href
 
         if synthesizer == nil {
             synthesizer = AVSpeechSynthesizer()
@@ -381,29 +381,20 @@ open class FolioReaderAudioPlayer: NSObject {
             let currentPage = readerCenter.currentPage else {
                 return
         }
-
-        let playbackActiveClass = book.playbackActiveClass
-        
-        currentPage.webView?.js("getSentenceWithIndex('\(playbackActiveClass)')") { sentence in
+                
+        currentPage.webView?.js("getSelectedText()") { sentence in
             guard let sentence = sentence else {
                 if (readerCenter.isLastPage() == true) {
                     self.stop()
-                } else {
-                    readerCenter.changePageToNext()
                 }
-                return
                 
-            }
-            
-            guard let href = readerCenter.getCurrentChapter()?.href else {
                 return
             }
             
-            // TODO QUESTION: The previous code made it possible to call `playText` with the parameter `href` being an empty string. Was that valid? should this logic be kept?
+            // Before this was a guard statement, but I'm not really sure what the purpose of the currentHref parameter is and there's no documentation, so for now we will allow sending null href's
+            let href = readerCenter.getCurrentChapter()?.href
             self.playText(href, text: sentence)
-            
         }
-        
     }
 
     func readCurrentSentence() {
@@ -563,7 +554,7 @@ extension FolioReaderAudioPlayer: AVSpeechSynthesizerDelegate {
     
     public func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
         if isPlaying() {
-            readCurrentSentence()
+            self.stop()
         }
     }
 }

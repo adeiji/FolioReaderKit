@@ -94,6 +94,7 @@ open class FolioReaderPageCollectionViewCell: UICollectionViewCell, WKNavigation
             webView?.scrollView.showsHorizontalScrollIndicator = false
             webView?.backgroundColor = .clear
             webView?.scrollView.isScrollEnabled = true
+            webView?.scrollView.bounces = true
             self.contentView.addSubview(webView!)
         }
         webView?.navigationDelegate = self
@@ -159,27 +160,26 @@ open class FolioReaderPageCollectionViewCell: UICollectionViewCell, WKNavigation
         webView?.alpha = 0
         let headerString = "<meta name=\"viewport\" content=\"initial-scale=1.0\" />"
         
-        let filename = getDocumentsDirectory().appendingPathComponent("temp/test.html")
-        
-        do {
-            // Insert the stored highlights to the HTML
-            let tempHtmlContent = htmlContentWithInsertHighlights(htmlContent)
+        DispatchQueue.global(qos: .background).async {
+            let filename = self.getDocumentsDirectory().appendingPathComponent("temp/test.html")
             
-            if FileManager.default.fileExists(atPath: filename.deletingLastPathComponent().path) {
-                try FileManager.default.removeItem(at: filename.deletingLastPathComponent())
+            do {
+                // Insert the stored highlights to the HTML
+                let tempHtmlContent = self.htmlContentWithInsertHighlights(htmlContent)
+                
+                if FileManager.default.fileExists(atPath: filename.deletingLastPathComponent().path) {
+                    try FileManager.default.removeItem(at: filename.deletingLastPathComponent())
+                }
+                
+                try FileManager.default.copyItem(at: baseURL, to: filename.deletingLastPathComponent())
+                try tempHtmlContent.write(to: filename, atomically: true, encoding: String.Encoding.utf8)
+                DispatchQueue.main.async {
+                    self.webView?.loadFileURL(filename, allowingReadAccessTo: filename.deletingLastPathComponent())
+                }
+            } catch {
+                print("Error while loading HTML String: \(error.localizedDescription)")
             }
-                        
-            try FileManager.default.copyItem(at: baseURL, to: filename.deletingLastPathComponent())
-            try tempHtmlContent.write(to: filename, atomically: true, encoding: String.Encoding.utf8)
-            webView?.loadFileURL(filename, allowingReadAccessTo: filename.deletingLastPathComponent())
-        } catch {
-            print("Error while loading HTML String: \(error.localizedDescription)")
-            // failed to write file – bad permissions, bad filename, missing permissions, or more likely it can't be converted to the encoding
         }
-        
-        
-        
-        
     }
 
     // MARK: - Highlights
@@ -243,14 +243,6 @@ open class FolioReaderPageCollectionViewCell: UICollectionViewCell, WKNavigation
             }
         }
         
-        let direction: ScrollDirection = self.folioReader.needsRTLChange ? .positive(withConfiguration: self.readerConfig) : .negative(withConfiguration: self.readerConfig)
-        
-        if (self.folioReader.readerCenter?.pageScrollDirection == direction &&
-            self.folioReader.readerCenter?.isScrolling == true &&
-            self.readerConfig.scrollDirection != .horizontalWithVerticalContent) {
-            scrollPageToBottom()
-        }
-        
         UIView.animate(withDuration: 0.2, animations: {webView.alpha = 1}, completion: { finished in
             webView.isColors = false
             self.webView?.createMenu(options: false)
@@ -259,6 +251,17 @@ open class FolioReaderPageCollectionViewCell: UICollectionViewCell, WKNavigation
         delegate?.pageDidLoad?(self)
         
         
+    }
+    
+    public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        
+        let direction: ScrollDirection = self.folioReader.needsRTLChange ? .positive(withConfiguration: self.readerConfig) : .negative(withConfiguration: self.readerConfig)
+        
+        if (self.folioReader.readerCenter?.pageScrollDirection == direction &&
+             self.folioReader.readerCenter?.recentlyScrolled == true &&
+            self.readerConfig.scrollDirection != .horizontalWithVerticalContent) {
+            scrollPageToBottom()
+        }
     }
     
     public func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
@@ -478,16 +481,19 @@ open class FolioReaderPageCollectionViewCell: UICollectionViewCell, WKNavigation
      Scrolls the page to bottom
      */
     open func scrollPageToBottom() {
-        guard let webView = webView else { return }
-        let bottomOffset = self.readerConfig.isDirection(
-            CGPoint(x: 0, y: webView.scrollView.contentSize.height - webView.scrollView.bounds.height),
-            CGPoint(x: webView.scrollView.contentSize.width - webView.scrollView.bounds.width, y: 0),
-            CGPoint(x: webView.scrollView.contentSize.width - webView.scrollView.bounds.width, y: 0)
-        )
+                
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            guard let webView = self.webView else { return }
+            let bottomOffset = self.readerConfig.isDirection(
+                CGPoint(x: 0, y: webView.scrollView.contentSize.height - webView.scrollView.bounds.height),
+                CGPoint(x: webView.scrollView.contentSize.width - webView.scrollView.bounds.width, y: 0),
+                CGPoint(x: webView.scrollView.contentSize.width - webView.scrollView.bounds.width, y: 0)
+            )
 
-        if bottomOffset.forDirection(withConfiguration: self.readerConfig) >= 0 {
-            DispatchQueue.main.async {
-                self.webView?.scrollView.setContentOffset(bottomOffset, animated: false)
+            if bottomOffset.forDirection(withConfiguration: self.readerConfig) >= 0 {
+                DispatchQueue.main.async {
+                    self.webView?.scrollView.setContentOffset(bottomOffset, animated: false)
+                }
             }
         }
     }
@@ -559,28 +565,6 @@ open class FolioReaderPageCollectionViewCell: UICollectionViewCell, WKNavigation
     // MARK: UIMenu visibility
 
     override open func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
-        guard let webView = webView else { return false }
-
-        if UIMenuController.shared.menuItems?.count == 0 {
-            webView.isColors = false
-            webView.createMenu(options: false)
-        }
-
-        if !webView.isShare && !webView.isColors {
-            
-            webView.js("getSelectedText()") { result in
-                
-                guard let result = result, result.components(separatedBy: " ").count == 1 else {
-                    webView.isOneWord = false
-                    return
-                }
-                
-                webView.isOneWord = true
-                webView.createMenu(options: false)
-                
-            }
-        }
-
         return super.canPerformAction(action, withSender: sender)
     }
 

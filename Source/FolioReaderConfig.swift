@@ -139,7 +139,7 @@ open class FolioReaderConfig: NSObject {
     open var scrollDirection: FolioReaderScrollDirection = .defaultVertical
 
     /// Enable or disable hability to user change scroll direction on menu.
-    open var canChangeScrollDirection = true
+    open var canChangeScrollDirection = false
 
     /// Enable or disable hability to user change font style on menu.
     open var canChangeFontStyle = true

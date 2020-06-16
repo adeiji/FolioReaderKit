@@ -59,26 +59,21 @@ open class FolioReaderWebView: WKWebView {
         guard readerConfig.useReaderMenuController else {
             return super.canPerformAction(action, withSender: sender)
         }
-
-        if isShare {
-            return false
-        } else if isColors {
-            return false
-        } else {
-            if action == #selector(highlight(_:))
-                || action == #selector(highlightWithNote(_:))
-                || action == #selector(updateHighlightNote(_:))
-                || (action == #selector(define(_:)) && isOneWord)
-                || (action == #selector(play(_:)) && (book.hasAudio || readerConfig.enableTTS))
-                || (action == #selector(share(_:)) && readerConfig.allowSharing)
-                || (action == #selector(copy(_:)) && readerConfig.allowSharing)
-                || (action == #selector(postTranslateButtonPressed(_:)))
-                || (action == #selector(postCreateCardButtonPressed(_:)))
-                || (action == #selector(share(_:))) {
-                return true
-            }
-            return false
+        
+        if action == #selector(highlight(_:))
+            || action == #selector(highlightWithNote(_:))
+            || action == #selector(updateHighlightNote(_:))
+            || (action == #selector(define(_:)))
+            || (action == #selector(play(_:)) && (book.hasAudio || readerConfig.enableTTS))
+            || (action == #selector(copy(_:)) && readerConfig.allowSharing)
+            || (action == #selector(postTranslateButtonPressed(_:)))
+            || (action == #selector(postCreateCardButtonPressed(_:)))
+            || (action == #selector(share(_:))) {
+            return true
         }
+    
+        return false
+        
     }
 
     // MARK: - UIMenuController - Actions
@@ -87,19 +82,12 @@ open class FolioReaderWebView: WKWebView {
         let alertController = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
 
         let shareImage = UIAlertAction(title: self.readerConfig.localizedShareImageQuote, style: .default, handler: { (action) -> Void in
-            if self.isShare {
-                self.js("getHighlightContent()") { textToShare in
-                    guard let textToShare = textToShare else { return }
-                    self.folioReader.readerCenter?.presentQuoteShare(textToShare)
-                }
-            } else {
-                self.js("getSelectedText()") { textToShare in
-                    guard let textToShare = textToShare else { return }
-                    self.folioReader.readerCenter?.presentQuoteShare(textToShare)
-                    
-                    self.clearTextSelection()
-                }
+            
+            self.js("getSelectedText()") { textToShare in
+                guard let textToShare = textToShare else { return }
+                self.folioReader.readerCenter?.presentQuoteShare(textToShare)
             }
+            
             self.setMenuVisible(false)
         })
 
@@ -246,8 +234,7 @@ open class FolioReaderWebView: WKWebView {
             let vc = UIReferenceLibraryViewController(term: selectedText)
             vc.view.tintColor = self.readerConfig.tintColor
             guard let readerContainer = self.readerContainer else { return }
-            readerContainer.show(vc, sender: nil)
-            
+            readerContainer.present(vc, animated: true, completion: nil)
         }
 
     }
@@ -300,34 +287,25 @@ open class FolioReaderWebView: WKWebView {
         
         let menuController = UIMenuController.shared
         
-        isShare = options
+        self.isShare = options
 
         let share = UIImage(readerImageNamed: "share-marker")
                                                 
         let defineItem = UIMenuItem(title: self.readerConfig.localizedDefineMenu, action: #selector(define(_:)))
-
+        
         let shareItem = UIMenuItem(title: "S", image: share) { [weak self] _ in
             guard let self = self else { return }
             self.share(menuController)
         }
         
+        let playItem = UIMenuItem(title: "Play", action: #selector(play(_:)))
+        
         var menuItems: [UIMenuItem] = []
 
-        // menu on existing highlight
-        if isShare {
-            if (self.readerConfig.allowSharing == true) {
-                menuItems.append(shareItem)
-            }
-            
-            isShare = false
-        } else {
-            menuItems = [defineItem]
-
-            if (self.readerConfig.allowSharing == true) {
-                menuItems.append(shareItem)
-            }
-        }
-                
+        menuItems.append(shareItem)
+        menuItems.append(defineItem)
+        menuItems.append(playItem)
+                        
         let translateItem = UIMenuItem(title: "Translate", action: #selector(postTranslateButtonPressed(_:)))
         menuItems.append(translateItem)
         
@@ -385,14 +363,12 @@ open class FolioReaderWebView: WKWebView {
     func setupScrollDirection() {
         switch self.readerConfig.scrollDirection {
         case .vertical, .defaultVertical, .horizontalWithVerticalContent:
-            scrollView.isPagingEnabled = false
-            //paginationMode = .unpaginated
+            scrollView.isPagingEnabled = false            
             scrollView.bounces = true
+            scrollView.isScrollEnabled = true
             break
         case .horizontal:
             scrollView.isPagingEnabled = true
-            //paginationMode = .leftToRight
-            //paginationBreakingMode = .page
             scrollView.bounces = false
             break
         }
