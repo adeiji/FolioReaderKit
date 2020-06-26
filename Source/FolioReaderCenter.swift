@@ -170,7 +170,7 @@ open class FolioReaderCenter: UIViewController, UICollectionViewDelegate, UIColl
         self.view.bringSubviewToFront(self.activityIndicator)
 
         if #available(iOS 10.0, *) {
-            collectionView.isPrefetchingEnabled = true
+            collectionView.isPrefetchingEnabled = false
         }
 
         // Register cell classes
@@ -518,7 +518,7 @@ open class FolioReaderCenter: UIViewController, UICollectionViewDelegate, UIColl
                 if readerConfig.scrollDirection == .horizontal {
                     size.height = size.height - view.safeAreaInsets.bottom
                 }
-            }            
+            }
         }
         
         return size

@@ -157,8 +157,7 @@ open class FolioReaderPageCollectionViewCell: UICollectionViewCell, WKNavigation
     }
 
     func loadHTMLString(_ htmlContent: String!, baseURL: URL!) {
-        webView?.alpha = 0
-        let headerString = "<meta name=\"viewport\" content=\"initial-scale=1.0\" />"
+        self.webView?.isHidden = true
         
         DispatchQueue.global(qos: .background).async {
             let filename = self.getDocumentsDirectory().appendingPathComponent("temp/test.html")
@@ -260,7 +259,9 @@ open class FolioReaderPageCollectionViewCell: UICollectionViewCell, WKNavigation
         if (self.folioReader.readerCenter?.pageScrollDirection == direction &&
              self.folioReader.readerCenter?.recentlyScrolled == true &&
             self.readerConfig.scrollDirection != .horizontalWithVerticalContent) {
-            scrollPageToBottom()
+            self.scrollPageToBottom()
+        } else {
+            self.webView?.isHidden = false
         }
     }
     
@@ -314,6 +315,12 @@ open class FolioReaderPageCollectionViewCell: UICollectionViewCell, WKNavigation
             
             let anchorFromURL = url.fragment
             
+            // If this url is going to the temp.html file, than allow the navigation since that's the actual book url.
+            if url.path.lastPathComponent == "test.html" {
+                decisionHandler(WKNavigationActionPolicy.allow)
+                return
+            }
+            
             // Handle internal url
             if !url.pathExtension.isEmpty {
                 let pathComponent = (self.book.opfResource.href as NSString?)?.deletingLastPathComponent
@@ -326,12 +333,12 @@ open class FolioReaderPageCollectionViewCell: UICollectionViewCell, WKNavigation
                 let splitedPath = path.components(separatedBy: base)
                 
                 // Return to avoid crash
-                if (splitedPath.count <= 1 || splitedPath[1].isEmpty) {
+                if (splitedPath.count == 0 || splitedPath[0].isEmpty) {
                     decisionHandler(WKNavigationActionPolicy.allow)
                     return
                 }
                 
-                let href = splitedPath[1].trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+                let href = splitedPath[0].trimmingCharacters(in: CharacterSet(charactersIn: "/"))
                 let hrefPage = (self.folioReader.readerCenter?.findPageByHref(href) ?? 0) + 1
                 
                 if (hrefPage == pageNumber) {
@@ -342,7 +349,7 @@ open class FolioReaderPageCollectionViewCell: UICollectionViewCell, WKNavigation
                         return
                     }
                 } else {
-                    self.folioReader.readerCenter?.changePageWith(href: href, animated: true)
+                    self.folioReader.readerCenter?.changePageWith(href: href.lastPathComponent, animated: true)
                 }
                decisionHandler(WKNavigationActionPolicy.cancel)
                 return
@@ -481,9 +488,11 @@ open class FolioReaderPageCollectionViewCell: UICollectionViewCell, WKNavigation
      Scrolls the page to bottom
      */
     open func scrollPageToBottom() {
-                
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+        // Hide the view so that the user doesn't see this strange jumping from the top of the page to the bottom
+        self.webView?.isHidden = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             guard let webView = self.webView else { return }
+            // Once we're ready to scroll to the bottom than we show the webView since it will already be scrolled to the bottom
             let bottomOffset = self.readerConfig.isDirection(
                 CGPoint(x: 0, y: webView.scrollView.contentSize.height - webView.scrollView.bounds.height),
                 CGPoint(x: webView.scrollView.contentSize.width - webView.scrollView.bounds.width, y: 0),
@@ -493,8 +502,13 @@ open class FolioReaderPageCollectionViewCell: UICollectionViewCell, WKNavigation
             if bottomOffset.forDirection(withConfiguration: self.readerConfig) >= 0 {
                 DispatchQueue.main.async {
                     self.webView?.scrollView.setContentOffset(bottomOffset, animated: false)
+                    self.webView?.isHidden = false
                 }
+            } else {
+                self.webView?.isHidden = false
             }
+            
+            
         }
     }
 

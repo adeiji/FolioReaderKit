@@ -7,11 +7,37 @@
 //
 
 import WebKit
+import AVFoundation
+import MediaPlayer
 
 public typealias JSCallback = ((String?) ->())
 
+
+public protocol CustomTextMenu {
+    
+}
+
+public extension CustomTextMenu {
+    
+    func getDefineScreenForText(_ text: String?, tintColor: UIColor) -> UIReferenceLibraryViewController? {
+        guard let text = text else { return nil }
+        
+        let vc = UIReferenceLibraryViewController(term: text)
+        vc.view.tintColor = tintColor
+        return vc
+    }
+    
+    func postCreateCardButtonPressed (_ sender: UIMenuController?) {
+        NotificationCenter.default.post(name: .CreateCardButtonPressed, object: nil, userInfo: nil)
+    }
+    
+    func postTranslateButtonPressed (_ sender: UIMenuController?) {
+        NotificationCenter.default.post(name: .TranslateButtonPressed, object: nil, userInfo: nil)
+    }
+}
+
 /// The custom WebView used in each page
-open class FolioReaderWebView: WKWebView {
+open class FolioReaderWebView: WKWebView, CustomTextMenu {
     
     var isColors = false
     var isShare = false
@@ -66,8 +92,8 @@ open class FolioReaderWebView: WKWebView {
             || (action == #selector(define(_:)))
             || (action == #selector(play(_:)) && (book.hasAudio || readerConfig.enableTTS))
             || (action == #selector(copy(_:)) && readerConfig.allowSharing)
-            || (action == #selector(postTranslateButtonPressed(_:)))
-            || (action == #selector(postCreateCardButtonPressed(_:)))
+            || (action == #selector(translateButtonPressed(_:)))
+            || (action == #selector(createCardButtonPressed(_:)))
             || (action == #selector(share(_:))) {
             return true
         }
@@ -221,22 +247,21 @@ open class FolioReaderWebView: WKWebView {
         }
    
     }
+    
+    
 
     @objc func define(_ sender: UIMenuController?) {
         
-        js("getSelectedText()") { selectedText in
-            
+        js("getSelectedText()") { selectedText in            
             guard let selectedText = selectedText else { return }
             
             self.setMenuVisible(false)
             self.clearTextSelection()
             
-            let vc = UIReferenceLibraryViewController(term: selectedText)
-            vc.view.tintColor = self.readerConfig.tintColor
+            guard let vc = self.getDefineScreenForText(selectedText, tintColor: self.readerConfig.tintColor) else { return }
             guard let readerContainer = self.readerContainer else { return }
             readerContainer.present(vc, animated: true, completion: nil)
         }
-
     }
 
     @objc func play(_ sender: UIMenuController?) {
@@ -306,10 +331,10 @@ open class FolioReaderWebView: WKWebView {
         menuItems.append(defineItem)
         menuItems.append(playItem)
                         
-        let translateItem = UIMenuItem(title: "Translate", action: #selector(postTranslateButtonPressed(_:)))
+        let translateItem = UIMenuItem(title: "Translate", action: #selector(translateButtonPressed(_:)))
         menuItems.append(translateItem)
         
-        let createCardItem = UIMenuItem(title: "Create Card", action: #selector(postCreateCardButtonPressed(_:)))
+        let createCardItem = UIMenuItem(title: "Create Card", action: #selector(createCardButtonPressed(_:)))
         
         menuItems.append(createCardItem)
                 
@@ -317,12 +342,13 @@ open class FolioReaderWebView: WKWebView {
                 
     }
     
-    @objc func postCreateCardButtonPressed (_ sender: UIMenuController?) {
-        NotificationCenter.default.post(name: .CreateCardButtonPressed, object: nil, userInfo: nil)
+    @objc internal func createCardButtonPressed (_ sender: UIMenuController?) {
+        self.postCreateCardButtonPressed(sender)
+        
     }
     
-    @objc func postTranslateButtonPressed (_ sender: UIMenuController?) {
-        NotificationCenter.default.post(name: .TranslateButtonPressed, object: nil, userInfo: nil)
+    @objc internal func translateButtonPressed (_ sender: UIMenuController?) {
+        self.postTranslateButtonPressed(sender)
     }
     
     open func setMenuVisible(_ menuVisible: Bool, animated: Bool = true, andRect rect: CGRect = CGRect.zero) {

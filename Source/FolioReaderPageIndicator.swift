@@ -94,15 +94,9 @@ class FolioReaderPageIndicator: UIView {
         } else {
             pagesLabel.text = " \(pagesRemaining) " + self.readerConfig.localizedReaderManyPagesLeft
         }
-
-//        let minutesRemaining = Int(ceil(CGFloat((pagesRemaining * totalMinutes)/totalPages)))
-//        if minutesRemaining > 1 {
-//            minutesLabel.text = "\(minutesRemaining) " + self.readerConfig.localizedReaderManyMinutes+" ·"
-//        } else if minutesRemaining == 1 {
-//            minutesLabel.text = self.readerConfig.localizedReaderOneMinute+" ·"
-//        } else {
-//            minutesLabel.text = self.readerConfig.localizedReaderLessThanOneMinute+" ·"
-//        }
+        
+        // For the time being we're going to not show this until we can get it working again
+        pagesLabel.isHidden = true
         
         reloadView(updateShadow: false)
     }
