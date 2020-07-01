@@ -97,6 +97,7 @@ open class FolioReaderPageCollectionViewCell: UICollectionViewCell, WKNavigation
             webView?.scrollView.bounces = true
             self.contentView.addSubview(webView!)
         }
+        
         webView?.navigationDelegate = self
 
         if colorView == nil {
@@ -157,12 +158,14 @@ open class FolioReaderPageCollectionViewCell: UICollectionViewCell, WKNavigation
     }
 
     func loadHTMLString(_ htmlContent: String!, baseURL: URL!) {
-        self.webView?.isHidden = true
-        
+                
         DispatchQueue.global(qos: .background).async {
-            let filename = self.getDocumentsDirectory().appendingPathComponent("temp/test.html")
-            
             do {
+                let dirPath = self.getDocumentsDirectory().appendingPathComponent("temp/\(UUID().uuidString)")
+                
+                try FileManager.default.createDirectory(atPath: dirPath.path, withIntermediateDirectories: true, attributes: nil)
+                let filename = dirPath.appendingPathComponent("temp.html")
+                
                 // Insert the stored highlights to the HTML
                 let tempHtmlContent = self.htmlContentWithInsertHighlights(htmlContent)
                 
@@ -316,7 +319,7 @@ open class FolioReaderPageCollectionViewCell: UICollectionViewCell, WKNavigation
             let anchorFromURL = url.fragment
             
             // If this url is going to the temp.html file, than allow the navigation since that's the actual book url.
-            if url.path.lastPathComponent == "test.html" {
+            if url.path.contains("temp/") {
                 decisionHandler(WKNavigationActionPolicy.allow)
                 return
             }
@@ -484,12 +487,20 @@ open class FolioReaderPageCollectionViewCell: UICollectionViewCell, WKNavigation
         webView?.scrollView.setContentOffset(pageOffsetPoint, animated: animated)
     }
 
+    private func showLoading () -> UIActivityIndicatorView? {
+        guard let webView = self.webView else { return nil }
+        let loading = UIActivityIndicatorView(style: .gray)
+        webView.addSubview(loading)
+        loading.center = webView.center
+        
+        return loading
+    }
+    
     /**
      Scrolls the page to bottom
      */
     open func scrollPageToBottom() {
-        // Hide the view so that the user doesn't see this strange jumping from the top of the page to the bottom
-        self.webView?.isHidden = true
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             guard let webView = self.webView else { return }
             // Once we're ready to scroll to the bottom than we show the webView since it will already be scrolled to the bottom
@@ -502,10 +513,7 @@ open class FolioReaderPageCollectionViewCell: UICollectionViewCell, WKNavigation
             if bottomOffset.forDirection(withConfiguration: self.readerConfig) >= 0 {
                 DispatchQueue.main.async {
                     self.webView?.scrollView.setContentOffset(bottomOffset, animated: false)
-                    self.webView?.isHidden = false
                 }
-            } else {
-                self.webView?.isHidden = false
             }
             
             

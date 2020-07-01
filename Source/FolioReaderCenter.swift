@@ -33,7 +33,7 @@ import ZFDragableModalTransition
 }
 
 /// The base reader class
-open class FolioReaderCenter: UIViewController, UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
+open class FolioReaderCenter: UIViewController, UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout, UICollectionViewDataSourcePrefetching {
 
     /// This delegate receives the events from the current `FolioReaderPage`s delegate.
     open weak var delegate: FolioReaderCenterDelegate?
@@ -149,6 +149,11 @@ open class FolioReaderCenter: UIViewController, UICollectionViewDelegate, UIColl
         collectionView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         collectionView.delegate = self
         collectionView.dataSource = self
+        if #available(iOS 10.0, *) {
+            collectionView.prefetchDataSource = self
+        } else {
+            // Fallback on earlier versions
+        }
         collectionView.isPagingEnabled = true
         collectionView.showsVerticalScrollIndicator = false
         collectionView.showsHorizontalScrollIndicator = false
@@ -170,7 +175,7 @@ open class FolioReaderCenter: UIViewController, UICollectionViewDelegate, UIColl
         self.view.bringSubviewToFront(self.activityIndicator)
 
         if #available(iOS 10.0, *) {
-            collectionView.isPrefetchingEnabled = false
+            collectionView.isPrefetchingEnabled = true
         }
 
         // Register cell classes
@@ -436,16 +441,23 @@ open class FolioReaderCenter: UIViewController, UICollectionViewDelegate, UIColl
         return totalPages
     }
 
-    open func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+    open func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {        
+
         let reuseableCell = collectionView.dequeueReusableCell(withReuseIdentifier: kReuseCellIdentifier, for: indexPath) as? FolioReaderPageCollectionViewCell
         return self.configure(readerPageCell: reuseableCell, atIndexPath: indexPath)
+    }
+    
+    public func collectionView(_ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]) {
+        
     }
 
     private func configure(readerPageCell cell: FolioReaderPageCollectionViewCell?, atIndexPath indexPath: IndexPath) -> UICollectionViewCell {
         guard let cell = cell, let readerContainer = readerContainer else {
             return UICollectionViewCell()
         }
-
+        
+        print("Current row \(indexPath.row)")
+        
         cell.setup(withReaderContainer: readerContainer)
         cell.pageNumber = indexPath.row+1
         cell.webView?.scrollView.delegate = self
@@ -498,6 +510,7 @@ open class FolioReaderCenter: UIViewController, UICollectionViewDelegate, UIColl
         }
         
         var baseURL = resource.fullHref.deletingLastPathComponent
+        let htmlName = URL(string: resource.fullHref)?.lastPathComponent
         
         while (baseURL.pathExtension != "epub") {
             baseURL = baseURL.deletingLastPathComponent
